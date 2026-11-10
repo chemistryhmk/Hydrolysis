@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторія гідролізу: Таємниця середовища</title>
+    <!-- Підключення Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Підключення Tone.js для синтезу звукових ефектів -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Підключення Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #020617);
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .chem-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Анімація плавання частинок у розчині */
+        @keyframes floatParticle {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(5px, -7px) rotate(2deg); }
+            50% { transform: translate(-4px, -11px) rotate(-2deg); }
+            75% { transform: translate(-7px, 4px) rotate(1deg); }
+        }
+
+        .particle-bubble {
+            animation: floatParticle 6s ease-in-out infinite;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, opacity 0.4s ease;
+            cursor: pointer;
+        }
+
+        .particle-bubble:hover {
+            transform: scale(1.12) !important;
+            z-index: 20;
+        }
+
+        /* Виділений йон, що зазнає гідролізу */
+        .ion-hydrolyzed {
+            box-shadow: 0 0 26px rgba(244, 63, 94, 0.9), inset 0 0 12px rgba(255, 255, 255, 0.65);
+            transform: scale(1.14) !important;
+            border-color: #fb7185 !important;
+        }
+
+        /* Інертний йон сильної кислоти або сильної основи */
+        .ion-inert {
+            opacity: 0.35;
+            filter: grayscale(75%);
+            transform: scale(0.9) !important;
+        }
+
+        .ion-inert::after {
+            content: '';
+            position: absolute;
+            width: 110%;
+            height: 3px;
+            background-color: #94a3b8;
+            transform: rotate(-35deg);
+            border-radius: 2px;
+        }
+
+        /* Бульбашки газу при необоротному гідролізі */
+        @keyframes riseGas {
+            0% { transform: translateY(0) scale(0.6); opacity: 0; }
+            30% { opacity: 0.85; }
+            100% { transform: translateY(-210px) scale(1.25); opacity: 0; }
+        }
+
+        .gas-bubble {
+            position: absolute;
+            bottom: 24px;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(148,163,184,0.35));
+            border-radius: 50%;
+            pointer-events: none;
+            animation: riseGas 2.1s ease-in infinite;
+        }
+
+        /* Випадання осаду при необоротному гідролізі */
+        @keyframes settleSolid {
+            0% { height: 0px; opacity: 0; }
+            100% { height: 34px; opacity: 0.95; }
+        }
+
+        .solid-precipitate {
+            animation: settleSolid 1.4s ease-out forwards;
+        }
+
+        .beaker-glass {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0.08) 100%);
+            box-shadow: inset 0 0 32px rgba(139, 92, 246, 0.18), 0 20px 40px rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(6px);
+        }
+
+        .liquid-body {
+            transition: background 1.2s ease;
+        }
+
+        .btn-action {
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+        .btn-action:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+        }
+    </style>
+</head>
+<body class="flex flex-col justify-between p-3 sm:p-6">
+
+    <!-- Верхня панель керування -->
+    <header class="max-w-6xl w-full mx-auto bg-slate-900/85 border border-slate-700/70 rounded-2xl p-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-lg shrink-0">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    Лабораторія гідролізу: Таємниця середовища
+                    <span class="hidden md:inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30">Рівень НМТ • 11 клас</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-400">Визначення типу гідролізу солей, pH середовища, індикаторів та рівнянь реакцій</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 sm:gap-4">
+            <button id="toggleSoundBtn" title="Увімкнути/вимкнути звук" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 transition">
+                <svg id="soundOnIcon" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                </svg>
+                <svg id="soundOffIcon" class="w-5 h-5 hidden text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l-2-2m-2 2l-2-2m2 2l2 2"></path>
+                </svg>
+            </button>
+
+            <button id="openCheatSheetBtn" class="px-3 py-2 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 text-violet-300 text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition">
+                <span>🧪</span> Пам'ятка НМТ
+            </button>
+
+            <div class="bg-slate-800/90 border border-slate-700 rounded-xl px-4 py-1.5 text-right">
+                <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Досліджено</div>
+                <div class="text-base sm:text-lg font-extrabold text-emerald-400"><span id="scoreDisplay">0</span> / <span id="totalCasesDisplay">6</span></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Навігація по зразках солей -->
+    <nav id="caseSelectorBar" class="max-w-6xl w-full mx-auto mt-3 flex flex-wrap gap-2 justify-center sm:justify-start"></nav>
+
+    <!-- Основна робоча область -->
+    <main class="max-w-6xl w-full mx-auto my-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch flex-grow">
+        
+        <!-- Ліва колонка: Пробірка / склянка з розчином солі (6 колонок) -->
+        <section class="lg:col-span-6 bg-slate-900/75 border border-slate-700/70 rounded-2xl p-5 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+            
+            <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <span id="caseBadge" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30">
+                        Зразок №1
+                    </span>
+                    <span id="caseStatusBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">
+                        Очікує аналізу
+                    </span>
+                </div>
+                <h2 id="caseTitle" class="text-xl sm:text-2xl font-bold text-white mb-1"></h2>
+                <p id="casePrompt" class="text-sm text-slate-300 leading-relaxed"></p>
+            </div>
+
+            <!-- Панель вибору інструменту -->
+            <div class="my-4 bg-slate-800/80 border border-slate-700 rounded-xl p-2 flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs font-semibold text-slate-400 px-2">Дія з частинками:</span>
+                <div class="flex gap-2 flex-grow sm:flex-grow-0">
+                    <button id="toolHydrolyzeBtn" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-rose-600 text-white shadow transition">
+                        <span>🎯</span> Позначити «слабку ланку»
+                    </button>
+                    <button id="toolInertBtn" class="flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
+                        <span>🛡️</span> Сильний (не гідролізує)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Лабораторна склянка -->
+            <div class="relative flex-grow min-h-[280px] sm:min-h-[320px] flex items-center justify-center my-2">
+                <div class="beaker-glass relative w-full max-w-md h-[280px] sm:h-[310px] rounded-b-[44px] rounded-t-xl border-x-4 border-b-4 border-slate-400/40 overflow-hidden flex items-center justify-center">
+                    
+                    <div class="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-slate-400/20 via-white/30 to-slate-400/20 border-b border-white/20"></div>
+                    
+                    <!-- Рідина в склянці (змінює колір під індикатор після перевірки!) -->
+                    <div id="liquidFill" class="liquid-body absolute bottom-0 left-0 right-0 h-[85%] bg-gradient-to-b from-indigo-500/20 to-violet-600/35 border-t border-indigo-300/30"></div>
+
+                    <!-- Контейнер бульбашок газу -->
+                    <div id="gasContainer" class="absolute inset-0 pointer-events-none hidden"></div>
+
+                    <!-- Шар осаду -->
+                    <div id="precipitateLayer" class="hidden absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-100 via-slate-200 to-slate-300/80 border-t-2 border-white shadow-inner z-10 flex items-center justify-center">
+                        <span id="precipitateLabel" class="text-xs font-extrabold text-slate-800 chem-font tracking-wide"></span>
+                    </div>
+
+                    <!-- Індікаторна смужка або підпис середовища після розкриття -->
+                    <div id="indicatorResultBadge" class="hidden absolute top-5 right-4 z-30 px-3 py-1.5 rounded-xl bg-slate-950/85 border border-white/20 text-xs font-bold shadow-lg"></div>
+
+                    <!-- Арена частинок у розчині -->
+                    <div id="particlesArena" class="relative z-20 w-full h-[80%] mt-8 p-4 flex flex-wrap items-center justify-center gap-4">
+                        <!-- Бульбашки частинок генеруються динамічно -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 pt-2 border-t border-slate-800">
+                <span>💡 Позначте частинку (або обидві), яка зв'язує H⁺ чи OH⁻ з води.</span>
+                <button id="resetBeakerBtn" class="text-violet-400 hover:text-violet-300 font-semibold underline">Скинути зразок</button>
+            </div>
+        </section>
+
+        <!-- Права колонка: Протокол гідролізу (6 колонок) -->
+        <section class="lg:col-span-6 bg-slate-900/75 border border-slate-700/70 rounded-2xl p-5 flex flex-col justify-between shadow-2xl">
+            <div class="space-y-4">
+                <div class="border-b border-slate-700/80 pb-2.5">
+                    <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                        <span>📋</span> Протокол дослідження гідролізу
+                    </h3>
+                </div>
+
+                <!-- Крок 1: Тип гідролізу -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-violet-400 mb-1.5">
+                        Крок 1. Визначте тип гідролізу солі:
+                    </label>
+                    <div id="hydrolysisTypeOptions" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                </div>
+
+                <!-- Крок 2: Середовище (pH) та забарвлення індикатора -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-violet-400 mb-1.5">
+                        Крок 2. Яке середовище (pH) та реакція індикатора?
+                    </label>
+                    <div id="phIndicatorOptions" class="grid grid-cols-1 gap-1.5"></div>
+                </div>
+
+                <!-- Крок 3: Конструктор скороченого йонного рівняння гідролізу (І ступінь) -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label id="eqBuilderLabel" class="block text-xs font-bold uppercase tracking-wider text-violet-400">
+                            Крок 3. Зберіть скорочене йонне рівняння (І ступінь):
+                        </label>
+                        <button id="clearEqBuilderBtn" type="button" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold underline">
+                            Очистити рядок
+                        </button>
+                    </div>
+                    
+                    <div id="assembledEquationArea" class="min-h-[50px] p-2 rounded-xl bg-slate-950/90 border-2 border-dashed border-slate-600 flex flex-wrap items-center gap-1.5 mb-2">
+                        <span class="text-xs text-slate-500 italic">Клікайте на блоки нижче (використовуйте «⇄» або «→»)...</span>
+                    </div>
+
+                    <div id="equationTilesPool" class="flex flex-wrap gap-1.5"></div>
+                </div>
+
+                <!-- Блок зворотного зв'язку -->
+                <div id="feedbackBox" class="hidden rounded-xl p-3 text-xs sm:text-sm border transition-all">
+                    <div id="feedbackTitle" class="font-bold mb-1"></div>
+                    <div id="feedbackText" class="leading-relaxed opacity-95"></div>
+                </div>
+            </div>
+
+            <div class="pt-3 mt-3 border-t border-slate-800 flex items-center gap-3">
+                <button id="checkCaseBtn" class="btn-action flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold text-sm sm:text-base">
+                    Перевірити аналіз
+                </button>
+                <button id="nextCaseBtn" class="hidden btn-action py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm sm:text-base flex items-center gap-1.5">
+                    Далі <span>➔</span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Модальне вікно: Пам'ятка НМТ з гідролізу -->
+    <div id="cheatSheetModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-extrabold text-white">🧪 Алгоритм гідролізу солей для НМТ</h3>
+                <button id="closeCheatSheetBtn" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div class="bg-slate-800/70 p-3.5 rounded-xl border border-rose-500/30">
+                    <h4 class="font-bold text-rose-400 mb-1.5">1. Гідроліз за КАТІОНОМ (pH &lt; 7)</h4>
+                    <p class="text-slate-300 mb-1">Сіль <strong>слабкої основи</strong> та <strong>сильної кислоти</strong> (напр., <span class="chem-font text-white">CuCl₂, Zn(NO₃)₂, NH₄Cl, Al₂(SO₄)₃</span>).</p>
+                    <p class="text-slate-400 text-xs">Катіон зв'язує <span class="chem-font text-white">OH⁻</span> води → накопичуються вільні йони <span class="chem-font text-rose-300">H⁺</span> (лакмус червоніє).</p>
+                </div>
+
+                <div class="bg-slate-800/70 p-3.5 rounded-xl border border-sky-500/30">
+                    <h4 class="font-bold text-sky-400 mb-1.5">2. Гідроліз за АНІОНОМ (pH &gt; 7)</h4>
+                    <p class="text-slate-300 mb-1">Сіль <strong>сильної основи</strong> та <strong>слабкої кислоти</strong> (напр., <span class="chem-font text-white">K₂CO₃, Na₂S, Na₂SO₃, CH₃COONa</span>).</p>
+                    <p class="text-slate-400 text-xs">Аніон зв'язує <span class="chem-font text-white">H⁺</span> води → накопичуються вільні йони <span class="chem-font text-sky-300">OH⁻</span> (фенолфталеїн малиновий, лакмус синій).</p>
+                </div>
+
+                <div class="bg-slate-800/70 p-3.5 rounded-xl border border-emerald-500/30">
+                    <h4 class="font-bold text-emerald-400 mb-1.5">3. Гідроліз НЕ відбувається (pH = 7)</h4>
+                    <p class="text-slate-300">Сіль <strong>сильної основи</strong> та <strong>сильної кислоти</strong> (<span class="chem-font text-white">NaCl, KNO₃, BaCl₂, Na₂SO₄</span>). Середовище нейтральне.</p>
+                </div>
+
+                <div class="bg-slate-800/70 p-3.5 rounded-xl border border-amber-500/30">
+                    <h4 class="font-bold text-amber-400 mb-1.5">4. Повний (необоротний) гідроліз</h4>
+                    <p class="text-slate-300">Сіль <strong>слабкої основи</strong> та <strong>слабкої леткої/нерозчинної кислоти</strong> (<span class="chem-font text-white">Al₂S₃, Cr₂S₃, Al₂(CO₃)₃</span>) розкладається водою повністю з утворенням осаду та газу (<span class="chem-font text-white">→</span>).</p>
+                </div>
+            </div>
+
+            <div class="text-right pt-1">
+                <button id="closeCheatSheetBtnBottom" class="px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm">Зрозуміло, до роботи!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно перемоги -->
+    <div id="victoryModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-emerald-500/50 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl space-y-4">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-3xl">
+                🎓
+            </div>
+            <h2 class="text-2xl font-extrabold text-white">Експертизу гідролізу завершено!</h2>
+            <p class="text-sm text-slate-300 leading-relaxed">
+                Ви впевнено розпізнаєте типи гідролізу солей, правильно прогнозуєте забарвлення індикаторів і безпомилково складаєте йонні рівняння рівня НМТ!
+            </p>
+            <div class="bg-slate-800/80 rounded-xl p-3 text-emerald-400 font-bold text-lg">
+                Результат: <span id="finalScoreText">6 з 6</span> зразків
+            </div>
+            <button id="restartAllBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-base shadow-lg">
+                Дослідити ще раз
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * База даних завдань з гідролізу солей (11 клас / підготовка до НМТ).
+         * Включає класичні солі з презентації (Zn(NO3)2, K2SO3, Al2S3/Cr2S3) та підступні випадки НМТ
+         * (гідрогенсульфат NaHSO4, ацетат амонію CH3COONH4, барій нітрат Ba(NO3)2).
+         */
+        const HYDROLYSIS_CASES = [
+            {
+                id: 1,
+                category: "Зразок №1 • Сіль слабкої основи і сильної кислоти",
+                title: "Розчин цинк нітрату Zn(NO₃)₂",
+                prompt: "У склянці розчинили кристалічний цинк нітрат Zn(NO₃)₂ та додали кілька крапель фіолетового лакмусу. Знайдіть частинку, яка зазнає гідролізу, і складіть скорочене йонне рівняння за І ступенем.",
+                particles: [
+                    { id: "p1", label: "Zn²⁺", type: "cation", weak: true },
+                    { id: "p2", label: "2NO₃⁻", type: "anion", weak: false }
+                ],
+                typeOptions: [
+                    { id: "cation", label: "За катіоном" },
+                    { id: "anion", label: "За аніоном" },
+                    { id: "both_rev", label: "За катіоном і аніоном (оборотний)" },
+                    { id: "none", label: "Не гідролізує" }
+                ],
+                correctType: "cation",
+                phOptions: [
+                    { id: "acidic_litmus", label: "Кисле (pH < 7) • лакмус стає червоним" },
+                    { id: "basic_litmus", label: "Лужне (pH > 7) • лакмус стає синім" },
+                    { id: "neutral_litmus", label: "Нейтральне (pH = 7) • лакмус фіолетовий" }
+                ],
+                correctPh: "acidic_litmus",
+                visualEffect: {
+                    type: "indicator",
+                    liquidColor: "rgba(239, 68, 68, 0.48)",
+                    badgeText: "pH < 7 • Лакмус червоний",
+                    badgeColor: "text-rose-300 border-rose-500/50"
+                },
+                eqLabel: "Крок 3. Скорочене йонне рівняння гідролізу (І ступінь):",
+                tiles: ["Zn²⁺", "+", "H₂O", "⇄", "ZnOH⁺", "H⁺", "OH⁻", "Zn(OH)₂", "2H⁺", "NO₃⁻", "→"],
+                correctSequence: ["Zn²⁺", "+", "H₂O", "⇄", "ZnOH⁺", "+", "H⁺"],
+                explanation: "Zn(OH)₂ — слабка нерозчинна основа, HNO₃ — сильна кислота. Катіон Zn²⁺ зв'язує OH⁻ з води (Zn²⁺ + H₂O ⇄ ZnOH⁺ + H⁺), тому в розчині накопичуються йони H⁺ (pH < 7)."
+            },
+            {
+                id: 2,
+                category: "Зразок №2 • Сіль сильної основи і слабкої кислоти",
+                title: "Розчин калій сульфіту K₂SO₃",
+                prompt: "У склянці приготували розчин калій сульфіту K₂SO₃ та додали краплю безбарвного фенолфталеїну. Визначте «слабку ланку» солі, середовище розчину та рівняння І ступеня гідролізу.",
+                particles: [
+                    { id: "p1", label: "2K⁺", type: "cation", weak: false },
+                    { id: "p2", label: "SO₃²⁻", type: "anion", weak: true }
+                ],
+                typeOptions: [
+                    { id: "cation", label: "За катіоном" },
+                    { id: "anion", label: "За аніоном" },
+                    { id: "irreversible", label: "Необоротний гідроліз" },
+                    { id: "none", label: "Не гідролізує" }
+                ],
+                correctType: "anion",
+                phOptions: [
+                    { id: "basic_pp", label: "Лужне (pH > 7) • фенолфталеїн малиновий" },
+                    { id: "acidic_pp", label: "Кисле (pH < 7) • фенолфталеїн безбарвний" },
+                    { id: "neutral_pp", label: "Нейтральне (pH = 7) • фенолфталеїн безбарвний" }
+                ],
+                correctPh: "basic_pp",
+                visualEffect: {
+                    type: "indicator",
+                    liquidColor: "rgba(219, 39, 119, 0.52)",
+                    badgeText: "pH > 7 • Фенолфталеїн малиновий",
+                    badgeColor: "text-pink-300 border-pink-500/50"
+                },
+                eqLabel: "Крок 3. Скорочене йонне рівняння гідролізу (І ступінь):",
+                tiles: ["SO₃²⁻", "+", "H₂O", "⇄", "HSO₃⁻", "OH⁻", "H₂SO₃", "H⁺", "2OH⁻", "SO₂↑", "K⁺"],
+                correctSequence: ["SO₃²⁻", "+", "H₂O", "⇄", "HSO₃⁻", "+", "OH⁻"],
+                explanation: "KOH — сильна основа, H₂SO₃ — слабка кислота. За І ступенем аніон SO₃²⁻ приєднує лише один протон від води (SO₃²⁻ + H₂O ⇄ HSO₃⁻ + OH⁻), створюючи лужне середовище."
+            },
+            {
+                id: 3,
+                category: "Зразок №3 • Пастка НМТ: Кисла сіль сильної кислоти",
+                title: "Розчин натрій гідрогенсульфату NaHSO₄",
+                prompt: "Увага, підступне завдання з НМТ! У воду внесли натрій гідрогенсульфат NaHSO₄ та додали метилоранж. Чи відбувається тут гідроліз, і яке середовище матиме розчин?",
+                particles: [
+                    { id: "p1", label: "Na⁺", type: "cation", weak: false },
+                    { id: "p2", label: "HSO₄⁻", type: "anion", weak: false }
+                ],
+                typeOptions: [
+                    { id: "none", label: "Гідроліз не відбувається" },
+                    { id: "anion", label: "За аніоном (дає лужне середовище)" },
+                    { id: "cation", label: "За катіоном" },
+                    { id: "irreversible", label: "Необоротний гідроліз" }
+                ],
+                correctType: "none",
+                phOptions: [
+                    { id: "acidic_mo", label: "Кисле (pH < 7) • метилоранж рожевий" },
+                    { id: "neutral_mo", label: "Нейтральне (pH = 7) • метилоранж оранжевий" },
+                    { id: "basic_mo", label: "Лужне (pH > 7) • метилоранж жовтий" }
+                ],
+                correctPh: "acidic_mo",
+                visualEffect: {
+                    type: "indicator",
+                    liquidColor: "rgba(244, 63, 94, 0.45)",
+                    badgeText: "pH < 7 • Дисоціація кислої солі!",
+                    badgeColor: "text-rose-300 border-rose-500/50"
+                },
+                eqLabel: "Крок 3. Рівняння процесу, що зумовлює pH розчину:",
+                tiles: ["HSO₄⁻", "⇄", "H⁺", "+", "SO₄²⁻", "H₂O", "H₂SO₄", "OH⁻", "Гідролізу немає"],
+                correctSequence: ["HSO₄⁻", "⇄", "H⁺", "+", "SO₄²⁻"],
+                explanation: "Класична пастка НМТ! NaHSO₄ утворена сильною основою (NaOH) і сильною кислотою (H₂SO₄), тому гідролізу НЕ зазнає. Проте йон HSO₄⁻ дисоціює як кислота (HSO₄⁻ ⇄ H⁺ + SO₄²⁻), роблячи середовище кислим!"
+            },
+            {
+                id: 4,
+                category: "Зразок №4 • Необоротний гідроліз у воді",
+                title: "Внесення хром(ІІІ) сульфіду Cr₂S₃ у воду",
+                prompt: "У склянку з водою додали твердий хром(ІІІ) сульфід Cr₂S₃ (у таблиці розчинності стоїть прочерк «–»). Обидва йони відповідають слабким нерозчинним/летким електролітам! Складіть молекулярне рівняння повного гідролізу.",
+                particles: [
+                    { id: "p1", label: "Cr³⁺", type: "cation", weak: true },
+                    { id: "p2", label: "S²⁻", type: "anion", weak: true }
+                ],
+                typeOptions: [
+                    { id: "irreversible", label: "Повний (необоротний) гідроліз" },
+                    { id: "cation", label: "Тільки за катіоном" },
+                    { id: "anion", label: "Тільки за аніоном" },
+                    { id: "none", label: "Не реагує з водою" }
+                ],
+                correctType: "irreversible",
+                phOptions: [
+                    { id: "precip_gas", label: "Випадає осад Cr(OH)₃↓ і виділяється газ H₂S↑" },
+                    { id: "only_basic", label: "Утворюється прозорий лужний розчин" },
+                    { id: "only_acidic", label: "Утворюється прозорий кислий розчин" }
+                ],
+                correctPh: "precip_gas",
+                visualEffect: {
+                    type: "both_solid_gas",
+                    liquidColor: "rgba(16, 185, 129, 0.25)",
+                    solidColor: "#a7f3d0",
+                    solidLabel: "Осад: 2Cr(OH)₃↓ + газ 3H₂S↑",
+                    badgeText: "Необоротний гідроліз (→)",
+                    badgeColor: "text-amber-300 border-amber-500/50"
+                },
+                eqLabel: "Крок 3. Молекулярне рівняння необоротного гідролізу Cr₂S₃:",
+                tiles: ["Cr₂S₃", "+", "6H₂O", "→", "2Cr(OH)₃↓", "3H₂S↑", "⇄", "3H₂O", "Cr(OH)₃↓", "H₂S↑", "Cr₂(SO₄)₃"],
+                correctSequence: ["Cr₂S₃", "+", "6H₂O", "→", "2Cr(OH)₃↓", "+", "3H₂S↑"],
+                explanation: "Оскільки Cr(OH)₃ випадає в осад, а H₂S виділяється у вигляді газу, обидва продукти покидають зону реакції, і гідроліз відбувається необоротно до кінця: Cr₂S₃ + 6H₂O → 2Cr(OH)₃↓ + 3H₂S↑."
+            },
+            {
+                id: 5,
+                category: "Зразок №5 • Сіль сильної основи і сильної кислоти",
+                title: "Розчин барій хлориду BaCl₂",
+                prompt: "У склянці розчинили барій хлорид BaCl₂ та додали універсальний індикатор. Перевірте силу основи та кислоти, що утворили цю сіль.",
+                particles: [
+                    { id: "p1", label: "Ba²⁺", type: "cation", weak: false },
+                    { id: "p2", label: "2Cl⁻", type: "anion", weak: false }
+                ],
+                typeOptions: [
+                    { id: "none", label: "Гідроліз не відбувається" },
+                    { id: "cation", label: "За катіоном (Ba²⁺)" },
+                    { id: "anion", label: "За аніоном (Cl⁻)" },
+                    { id: "both_rev", label: "За катіоном і аніоном" }
+                ],
+                correctType: "none",
+                phOptions: [
+                    { id: "neutral_univ", label: "Нейтральне (pH = 7) • універсальний індикатор жовто-зелений" },
+                    { id: "basic_univ", label: "Лужне (pH > 7) • універсальний індикатор синій" },
+                    { id: "acidic_univ", label: "Кисле (pH < 7) • універсальний індикатор червоний" }
+                ],
+                correctPh: "neutral_univ",
+                visualEffect: {
+                    type: "indicator",
+                    liquidColor: "rgba(234, 179, 8, 0.38)",
+                    badgeText: "pH = 7 • Середовище нейтральне",
+                    badgeColor: "text-amber-200 border-amber-400/50"
+                },
+                eqLabel: "Крок 3. Висновок для рівняння гідролізу:",
+                tiles: ["Гідроліз не відбувається", "Ba²⁺", "+", "H₂O", "⇄", "BaOH⁺", "H⁺", "Cl⁻", "HCl", "OH⁻"],
+                correctSequence: ["Гідроліз не відбувається"],
+                explanation: "Ba(OH)₂ — луг (сильна основа), HCl — сильна кислота. Жоден із йонів не зв'язує компоненти води, тому концентрації [H⁺] = [OH⁻] = 10⁻⁷ моль/л, а pH = 7."
+            },
+            {
+                id: 6,
+                category: "Зразок №6 • Органічна сіль слабкої кислоти",
+                title: "Розчин натрій етаноату (ацетату) CH₃COONa",
+                prompt: "У склянці розчинили натрій етаноат CH₃COONa та додали лакмус. Пригадайте силу етанової (оцтової) кислоти CH₃COOH у водному розчині!",
+                particles: [
+                    { id: "p1", label: "Na⁺", type: "cation", weak: false },
+                    { id: "p2", label: "CH₃COO⁻", type: "anion", weak: true }
+                ],
+                typeOptions: [
+                    { id: "anion", label: "За аніоном" },
+                    { id: "cation", label: "За катіоном" },
+                    { id: "none", label: "Не гідролізує" },
+                    { id: "irreversible", label: "Необоротний гідроліз" }
+                ],
+                correctType: "anion",
+                phOptions: [
+                    { id: "basic_lit", label: "Лужне (pH > 7) • лакмус стає синім" },
+                    { id: "acidic_lit", label: "Кисле (pH < 7) • лакмус стає червоним" },
+                    { id: "neutral_lit", label: "Нейтральне (pH = 7) • лакмус фіолетовий" }
+                ],
+                correctPh: "basic_lit",
+                visualEffect: {
+                    type: "indicator",
+                    liquidColor: "rgba(37, 99, 235, 0.52)",
+                    badgeText: "pH > 7 • Лакмус синій",
+                    badgeColor: "text-sky-300 border-sky-400/50"
+                },
+                eqLabel: "Крок 3. Скорочене йонне рівняння гідролізу:",
+                tiles: ["CH₃COO⁻", "+", "H₂O", "⇄", "CH₃COOH", "OH⁻", "H⁺", "CH₃COONa", "NaOH", "→"],
+                correctSequence: ["CH₃COO⁻", "+", "H₂O", "⇄", "CH₃COOH", "+", "OH⁻"],
+                explanation: "Етанова кислота CH₃COOH — слабкий електроліт, а NaOH — сильна основа. Етаноат-аніон відриває протон від води (CH₃COO⁻ + H₂O ⇄ CH₃COOH + OH⁻), створюючи лужне середовище."
+            }
+        ];
+
+        // Стан програми
+        let currentCaseIndex = 0;
+        let currentTool = "hydrolyze"; // "hydrolyze" або "inert"
+        let particleStates = {}; // { id: 'normal' | 'hydrolyzed' | 'inert' }
+        let selectedType = null;
+        let selectedPh = null;
+        let assembledTokens = [];
+        let currentShuffledTiles = [];
+        let solvedCases = new Set();
+        let soundEnabled = true;
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Синтез звуку (Tone.js)
+        let synth = null;
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!synth) {
+                    synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                    synth.volume.value = -8;
+                }
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                if (type === 'pop') synth.triggerAttackRelease("D5", "32n");
+                else if (type === 'cross') synth.triggerAttackRelease("G3", "32n");
+                else if (type === 'success') synth.triggerAttackRelease(["D5", "F#5", "A5", "D6"], "8n");
+                else if (type === 'error') synth.triggerAttackRelease(["E3", "F3"], "8n");
+            } catch (e) {}
+        }
+
+        // Елементи DOM
+        const caseSelectorBar = document.getElementById('caseSelectorBar');
+        const caseBadge = document.getElementById('caseBadge');
+        const caseStatusBadge = document.getElementById('caseStatusBadge');
+        const caseTitle = document.getElementById('caseTitle');
+        const casePrompt = document.getElementById('casePrompt');
+        const particlesArena = document.getElementById('particlesArena');
+        const liquidFill = document.getElementById('liquidFill');
+        const gasContainer = document.getElementById('gasContainer');
+        const precipitateLayer = document.getElementById('precipitateLayer');
+        const precipitateLabel = document.getElementById('precipitateLabel');
+        const indicatorResultBadge = document.getElementById('indicatorResultBadge');
+        const hydrolysisTypeOptions = document.getElementById('hydrolysisTypeOptions');
+        const phIndicatorOptions = document.getElementById('phIndicatorOptions');
+        const eqBuilderLabel = document.getElementById('eqBuilderLabel');
+        const assembledEquationArea = document.getElementById('assembledEquationArea');
+        const equationTilesPool = document.getElementById('equationTilesPool');
+        const feedbackBox = document.getElementById('feedbackBox');
+        const feedbackTitle = document.getElementById('feedbackTitle');
+        const feedbackText = document.getElementById('feedbackText');
+        const checkCaseBtn = document.getElementById('checkCaseBtn');
+        const nextCaseBtn = document.getElementById('nextCaseBtn');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const totalCasesDisplay = document.getElementById('totalCasesDisplay');
+
+        function initGame() {
+            totalCasesDisplay.textContent = HYDROLYSIS_CASES.length;
+            renderCaseNav();
+            loadCase(0);
+            setupEventListeners();
+        }
+
+        function renderCaseNav() {
+            caseSelectorBar.innerHTML = '';
+            HYDROLYSIS_CASES.forEach((c, idx) => {
+                const isSolved = solvedCases.has(c.id);
+                const isCurrent = idx === currentCaseIndex;
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                    isCurrent
+                        ? 'bg-violet-600 border-violet-400 text-white shadow-md'
+                        : isSolved
+                        ? 'bg-emerald-950/60 border-emerald-600/60 text-emerald-300 hover:bg-emerald-900/60'
+                        : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`;
+                btn.innerHTML = `<span>${isSolved ? '✅' : '🧪'}</span> Зразок ${c.id}`;
+                btn.onclick = () => loadCase(idx);
+                caseSelectorBar.appendChild(btn);
+            });
+        }
+
+        function loadCase(index) {
+            currentCaseIndex = index;
+            const currentCase = HYDROLYSIS_CASES[index];
+
+            particleStates = {};
+            currentCase.particles.forEach(p => {
+                particleStates[p.id] = 'normal';
+            });
+            selectedType = null;
+            selectedPh = null;
+            assembledTokens = [];
+            currentShuffledTiles = shuffleArray(currentCase.tiles);
+
+            caseBadge.textContent = currentCase.category;
+            caseTitle.textContent = currentCase.title;
+            casePrompt.textContent = currentCase.prompt;
+            eqBuilderLabel.textContent = currentCase.eqLabel;
+
+            if (solvedCases.has(currentCase.id)) {
+                caseStatusBadge.textContent = "Досліджено ✓";
+                caseStatusBadge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+            } else {
+                caseStatusBadge.textContent = "Очікує аналізу";
+                caseStatusBadge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400";
+            }
+
+            resetVisuals();
+            renderParticles(currentCase.particles);
+            renderOptionGroup(hydrolysisTypeOptions, currentCase.typeOptions, () => selectedType, val => { selectedType = val; });
+            renderOptionGroup(phIndicatorOptions, currentCase.phOptions, () => selectedPh, val => { selectedPh = val; });
+            renderEquationBuilder(currentShuffledTiles);
+
+            feedbackBox.classList.add('hidden');
+            checkCaseBtn.classList.remove('hidden');
+            nextCaseBtn.classList.add('hidden');
+            renderCaseNav();
+        }
+
+        function resetVisuals() {
+            liquidFill.style.background = "linear-gradient(to bottom, rgba(99, 102, 241, 0.2), rgba(124, 58, 237, 0.35))";
+            gasContainer.innerHTML = '';
+            gasContainer.classList.add('hidden');
+            precipitateLayer.classList.add('hidden');
+            precipitateLayer.classList.remove('solid-precipitate');
+            indicatorResultBadge.classList.add('hidden');
+        }
+
+        function renderParticles(particles) {
+            particlesArena.innerHTML = '';
+            particles.forEach((p, idx) => {
+                const state = particleStates[p.id];
+                const bubble = document.createElement('button');
+                bubble.type = 'button';
+
+                const colorClasses = p.type === "cation"
+                    ? "from-rose-500/90 to-red-700/90 border-rose-300/70 text-white"
+                    : "from-sky-500/90 to-indigo-700/90 border-sky-300/70 text-white";
+
+                let stateClasses = "";
+                if (state === 'hydrolyzed') stateClasses = "ion-hydrolyzed";
+                if (state === 'inert') stateClasses = "ion-inert";
+
+                bubble.className = `particle-bubble relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br ${colorClasses} border-2 flex items-center justify-center shadow-lg chem-font font-extrabold text-base sm:text-lg ${stateClasses}`;
+                bubble.style.animationDelay = `${(idx * 0.9) % 4}s`;
+                bubble.textContent = p.label;
+
+                bubble.onclick = () => {
+                    const cur = particleStates[p.id];
+                    if (currentTool === 'hydrolyze') {
+                        particleStates[p.id] = cur === 'hydrolyzed' ? 'normal' : 'hydrolyzed';
+                        playSound('pop');
+                    } else {
+                        particleStates[p.id] = cur === 'inert' ? 'normal' : 'inert';
+                        playSound('cross');
+                    }
+                    renderParticles(HYDROLYSIS_CASES[currentCaseIndex].particles);
+                };
+                particlesArena.appendChild(bubble);
+            });
+        }
+
+        function renderOptionGroup(container, options, getter, setter) {
+            container.innerHTML = '';
+            options.forEach(opt => {
+                const isSelected = getter() === opt.id;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `w-full text-left px-3 py-2 rounded-xl text-xs sm:text-sm font-medium border transition flex items-center justify-between gap-2 ${
+                    isSelected
+                        ? 'bg-violet-600/35 border-violet-400 text-white shadow'
+                        : 'bg-slate-800/70 border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-slate-500'
+                }`;
+                btn.innerHTML = `
+                    <span>${opt.label}</span>
+                    <span class="w-4 h-4 shrink-0 rounded-full border flex items-center justify-center ${isSelected ? 'border-violet-400 bg-violet-400' : 'border-slate-500'}">
+                        ${isSelected ? '<span class="w-1.5 h-1.5 rounded-full bg-slate-950"></span>' : ''}
+                    </span>
+                `;
+                btn.onclick = () => {
+                    setter(opt.id);
+                    playSound('pop');
+                    renderOptionGroup(container, options, getter, setter);
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderEquationBuilder(tiles) {
+            assembledEquationArea.innerHTML = '';
+            if (assembledTokens.length === 0) {
+                assembledEquationArea.innerHTML = '<span class="text-xs text-slate-500 italic">Клікайте на блоки нижче, щоб побудувати рівняння...</span>';
+            } else {
+                assembledTokens.forEach((token, idx) => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.title = "Натисніть, щоб прибрати блок";
+                    const isOp = token === '+' || token === '⇄' || token === '→';
+                    chip.className = `px-2.5 py-1 rounded-lg chem-font text-xs sm:text-sm font-bold transition ${
+                        isOp
+                            ? 'bg-slate-700 text-amber-300 border border-slate-500'
+                            : 'bg-fuchsia-600 text-white border border-fuchsia-400 shadow hover:bg-rose-600'
+                    }`;
+                    chip.textContent = token;
+                    chip.onclick = () => {
+                        assembledTokens.splice(idx, 1);
+                        playSound('cross');
+                        renderEquationBuilder(tiles);
+                    };
+                    assembledEquationArea.appendChild(chip);
+                });
+            }
+
+            equationTilesPool.innerHTML = '';
+            tiles.forEach(tileText => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                const isOp = tileText === '+' || tileText === '⇄' || tileText === '→';
+                btn.className = `px-2.5 py-1.5 rounded-lg chem-font text-xs sm:text-sm font-bold border transition active:scale-95 ${
+                    isOp
+                        ? 'bg-slate-800 border-amber-500/50 text-amber-300 hover:bg-slate-700'
+                        : 'bg-slate-800/90 border-slate-600 text-slate-200 hover:bg-slate-700 hover:border-violet-400'
+                }`;
+                btn.textContent = tileText;
+                btn.onclick = () => {
+                    assembledTokens.push(tileText);
+                    playSound('pop');
+                    renderEquationBuilder(tiles);
+                };
+                equationTilesPool.appendChild(btn);
+            });
+        }
+
+        function triggerVisualEffect(effect) {
+            if (!effect) return;
+            if (effect.liquidColor) {
+                liquidFill.style.background = effect.liquidColor;
+            }
+            if (effect.badgeText) {
+                indicatorResultBadge.textContent = effect.badgeText;
+                indicatorResultBadge.className = `absolute top-5 right-4 z-30 px-3 py-1.5 rounded-xl bg-slate-950/90 border text-xs font-bold shadow-lg ${effect.badgeColor || 'text-white border-white/20'}`;
+                indicatorResultBadge.classList.remove('hidden');
+            }
+            if (effect.type === 'both_solid_gas') {
+                precipitateLabel.textContent = effect.solidLabel || "Осад↓";
+                precipitateLayer.style.background = effect.solidColor || "#e2e8f0";
+                precipitateLayer.classList.remove('hidden');
+                precipitateLayer.classList.add('solid-precipitate');
+
+                gasContainer.classList.remove('hidden');
+                gasContainer.innerHTML = '';
+                for (let i = 0; i < 16; i++) {
+                    const g = document.createElement('div');
+                    g.className = 'gas-bubble';
+                    const size = Math.floor(Math.random() * 11) + 6;
+                    g.style.width = `${size}px`;
+                    g.style.height = `${size}px`;
+                    g.style.left = `${Math.floor(Math.random() * 82) + 9}%`;
+                    g.style.animationDelay = `${(Math.random() * 2).toFixed(2)}s`;
+                    gasContainer.appendChild(g);
+                }
+            }
+        }
+
+        function isEquationEquivalent(userTokens, correctTokens) {
+            if (correctTokens.length === 1) {
+                return userTokens.length === 1 && userTokens[0] === correctTokens[0];
+            }
+            const arrow = correctTokens.includes('⇄') ? '⇄' : '→';
+            const parseSides = (tokens) => {
+                const arrowIdx = tokens.indexOf(arrow);
+                if (arrowIdx === -1 || tokens.lastIndexOf(arrow) !== arrowIdx) return null;
+                const left = tokens.slice(0, arrowIdx);
+                const right = tokens.slice(arrowIdx + 1);
+                const extractTerms = (side) => {
+                    if (side.length === 0 || side.length % 2 === 0) return null;
+                    const terms = [];
+                    for (let i = 0; i < side.length; i++) {
+                        if (i % 2 === 0) {
+                            if (side[i] === '+' || side[i] === '⇄' || side[i] === '→') return null;
+                            terms.push(side[i]);
+                        } else if (side[i] !== '+') {
+                            return null;
+                        }
+                    }
+                    return terms.sort();
+                };
+                const leftTerms = extractTerms(left);
+                const rightTerms = extractTerms(right);
+                if (!leftTerms || !rightTerms) return null;
+                return { left: leftTerms, right: rightTerms };
+            };
+            const u = parseSides(userTokens);
+            const c = parseSides(correctTokens);
+            if (!u || !c) return false;
+            return JSON.stringify(u.left) === JSON.stringify(c.left) && JSON.stringify(u.right) === JSON.stringify(c.right);
+        }
+
+        function validateCase() {
+            const currentCase = HYDROLYSIS_CASES[currentCaseIndex];
+
+            // 1. Перевірка виділеної «слабкої ланки» у склянці
+            const weakParticles = currentCase.particles.filter(p => p.weak);
+            const strongParticles = currentCase.particles.filter(p => !p.weak);
+
+            const allWeakMarked = weakParticles.every(p => particleStates[p.id] === 'hydrolyzed');
+            const noStrongMarked = strongParticles.every(p => particleStates[p.id] !== 'hydrolyzed');
+
+            if (!allWeakMarked || !noStrongMarked) {
+                showFeedback(
+                    false,
+                    "Перевірте частинки у склянці!",
+                    weakParticles.length === 0
+                        ? "У цій солі обидва йони відповідають сильним електролітам — жоден із них не піддається гідролізу. Зніміть червоне виділення."
+                        : "Позначте інструментом 🎯 лише йон (або йони) слабкого електроліту, який реагує з водою."
+                );
+                playSound('error');
+                return;
+            }
+
+            // 2. Перевірка Кроку 1
+            if (!selectedType) {
+                showFeedback(false, "Не заповнено Крок 1", "Оберіть тип гідролізу цієї солі.");
+                playSound('error');
+                return;
+            }
+            if (selectedType !== currentCase.correctType) {
+                showFeedback(false, "Помилка у Кроці 1", "Неправильно визначено тип гідролізу. Перевірте силу основи та кислоти, що утворюють сіль.");
+                playSound('error');
+                return;
+            }
+
+            // 3. Перевірка Кроку 2
+            if (!selectedPh) {
+                showFeedback(false, "Не заповнено Крок 2", "Оберіть середовище (pH) та колір індикатора.");
+                playSound('error');
+                return;
+            }
+            if (selectedPh !== currentCase.correctPh) {
+                showFeedback(false, "Помилка у Кроці 2", "Неправильно визначено pH середовища або забарвлення індикатора.");
+                playSound('error');
+                return;
+            }
+
+            // 4. Перевірка Кроку 3 (конструктор рівняння)
+            if (assembledTokens.length === 0) {
+                showFeedback(false, "Не заповнено Крок 3", "Зберіть рівняння процесу з плиток-цеглинок.");
+                playSound('error');
+                return;
+            }
+            if (!isEquationEquivalent(assembledTokens, currentCase.correctSequence)) {
+                showFeedback(
+                    false,
+                    "Помилка у рівнянні (Крок 3)",
+                    "Перевірте формули частинок, стрілку оборотності («⇄» для оборотного гідролізу або «→» для необоротного) та заряди йонів."
+                );
+                playSound('error');
+                return;
+            }
+
+            // Усе вірно! Автоматично приглушуємо сильні йони для наочності
+            strongParticles.forEach(p => {
+                particleStates[p.id] = 'inert';
+            });
+            renderParticles(currentCase.particles);
+            triggerVisualEffect(currentCase.visualEffect);
+
+            solvedCases.add(currentCase.id);
+            scoreDisplay.textContent = solvedCases.size;
+            caseStatusBadge.textContent = "Досліджено ✓";
+            caseStatusBadge.className = "text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+            renderCaseNav();
+
+            showFeedback(true, "Експертиза бездоганна!", currentCase.explanation);
+            playSound('success');
+
+            checkCaseBtn.classList.add('hidden');
+            nextCaseBtn.classList.remove('hidden');
+            nextCaseBtn.innerHTML = solvedCases.size === HYDROLYSIS_CASES.length ? 'Завершити <span>🎓</span>' : 'Наступний зразок <span>➔</span>';
+        }
+
+        function showFeedback(isSuccess, title, text) {
+            feedbackBox.classList.remove('hidden', 'bg-rose-950/60', 'border-rose-500/50', 'text-rose-200', 'bg-emerald-950/60', 'border-emerald-500/50', 'text-emerald-200');
+            if (isSuccess) {
+                feedbackBox.classList.add('bg-emerald-950/60', 'border-emerald-500/50', 'text-emerald-200');
+            } else {
+                feedbackBox.classList.add('bg-rose-950/60', 'border-rose-500/50', 'text-rose-200');
+            }
+            feedbackTitle.textContent = (isSuccess ? "✅ " : "⚠️ ") + title;
+            feedbackText.textContent = text;
+        }
+
+        function setupEventListeners() {
+            const toolHydrolyzeBtn = document.getElementById('toolHydrolyzeBtn');
+            const toolInertBtn = document.getElementById('toolInertBtn');
+
+            toolHydrolyzeBtn.onclick = () => {
+                currentTool = 'hydrolyze';
+                toolHydrolyzeBtn.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-rose-600 text-white shadow transition";
+                toolInertBtn.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600 transition";
+            };
+
+            toolInertBtn.onclick = () => {
+                currentTool = 'inert';
+                toolInertBtn.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-600 text-white shadow transition";
+                toolHydrolyzeBtn.className = "flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-700 text-slate-300 hover:bg-slate-600 transition";
+            };
+
+            document.getElementById('resetBeakerBtn').onclick = () => loadCase(currentCaseIndex);
+            document.getElementById('clearEqBuilderBtn').onclick = () => {
+                assembledTokens = [];
+                playSound('cross');
+                renderEquationBuilder(currentShuffledTiles);
+            };
+
+            checkCaseBtn.onclick = validateCase;
+
+            nextCaseBtn.onclick = () => {
+                if (solvedCases.size === HYDROLYSIS_CASES.length) {
+                    document.getElementById('finalScoreText').textContent = `${solvedCases.size} з ${HYDROLYSIS_CASES.length}`;
+                    document.getElementById('victoryModal').classList.remove('hidden');
+                } else {
+                    loadCase((currentCaseIndex + 1) % HYDROLYSIS_CASES.length);
+                }
+            };
+
+            const cheatSheetModal = document.getElementById('cheatSheetModal');
+            document.getElementById('openCheatSheetBtn').onclick = () => cheatSheetModal.classList.remove('hidden');
+            document.getElementById('closeCheatSheetBtn').onclick = () => cheatSheetModal.classList.add('hidden');
+            document.getElementById('closeCheatSheetBtnBottom').onclick = () => cheatSheetModal.classList.add('hidden');
+
+            document.getElementById('restartAllBtn').onclick = () => {
+                solvedCases.clear();
+                scoreDisplay.textContent = '0';
+                document.getElementById('victoryModal').classList.add('hidden');
+                loadCase(0);
+            };
+
+            const toggleSoundBtn = document.getElementById('toggleSoundBtn');
+            const soundOnIcon = document.getElementById('soundOnIcon');
+            const soundOffIcon = document.getElementById('soundOffIcon');
+            toggleSoundBtn.onclick = () => {
+                soundEnabled = !soundEnabled;
+                soundOnIcon.classList.toggle('hidden', !soundEnabled);
+                soundOffIcon.classList.toggle('hidden', soundEnabled);
+            };
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
